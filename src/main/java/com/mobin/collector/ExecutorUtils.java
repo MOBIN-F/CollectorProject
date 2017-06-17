@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Mobin on 2017/5/6.
+ * 实现ThreadFactory定制守护线程，之所以使用守护线程是因为采集程序需要一个长驻的不断轮询的线程
  */
 public class ExecutorUtils {
 
@@ -21,7 +22,7 @@ public class ExecutorUtils {
     }
 
     public static volatileExecutor createVolatileExecutor(String name, int maximumPoolSize){
-        if (maximumPoolSize < 0) {
+        if (maximumPoolSize <= 0) {
             maximumPoolSize = Runtime.getRuntime().availableProcessors();
         }
         return new volatileExecutor(1, maximumPoolSize, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
@@ -53,6 +54,7 @@ public class ExecutorUtils {
             threadPoolExecutor.shutdown();
         }
 
+        //传入task，要把task的类型来执行任务
         public void submitTasks(List<?> tasks) {
             for (Object task : tasks) {
                 if (task instanceof  Runnable) {
@@ -76,6 +78,7 @@ public class ExecutorUtils {
 
         public void submitTask(Callable<?> task) {
             try {
+
                 futures.add(threadPoolExecutor.submit(task));
                 tasks.add(task);
             }catch (Exception e) {
@@ -141,7 +144,7 @@ public class ExecutorUtils {
             String name = id + "-" + n.getAndIncrement();
             Thread thread = new Thread(runnable,name);
             thread.setPriority(priority);
-            thread.setDaemon(true);
+            thread.setDaemon(true);    //守护线程
             return thread;
         }
     }
