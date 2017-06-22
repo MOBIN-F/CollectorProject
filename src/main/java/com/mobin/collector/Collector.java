@@ -31,6 +31,8 @@ public abstract  class Collector implements  Runnable {
 
     public abstract Map<String, ArrayList<CollectFile>> getNewFiles();
 
+    public abstract String getFileDateTime(String fileName);
+
     static final FilenameFilter downFilter = new FilenameFilter() {
         @Override
         public boolean accept(File dir, String name) {
@@ -114,6 +116,13 @@ public abstract  class Collector implements  Runnable {
                      removeDirCache(d);
                 } else {
                     String name = f.getName();
+                    String dateTime;
+                    try {
+                        dateTime = getFileDateTime(name);
+                    }catch (Exception e){
+                        log.warn("文件名不包含日期时间，可能是一个无效的文件或文件名");
+                        continue;
+                    }
                 }
             }
         }
