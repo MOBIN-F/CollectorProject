@@ -1,16 +1,19 @@
 package com.mobin.collector;
 
 import com.mobin.common.SmallLRUCache;
+import com.mobin.collector.FSUtils.*;
+import com.mobin.config.Config;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.tools.cmd.gen.AnyVals;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Filter;
 
@@ -22,9 +25,12 @@ public abstract  class Collector implements  Runnable {
     static final Logger log = LoggerFactory.getLogger(Collector.class);
     static final String DONE = ".done";
     static final String DOWN = ".down";
+
+    FileSystem fs;
     String collectorPath;
     String srcPath;
     String type;
+    CollectorOptions options;
 
     public static final String NEW_FILES = "_NEW_FILES_";
     public static final String _COPIED_FILES_ = "_COPIED_FILES_";
@@ -91,11 +97,25 @@ public abstract  class Collector implements  Runnable {
         return getNewFiles(list, filter);
     }
 
+    public List<String> getDateDir(){
+        if (collectorPath == null || collectorPath.isEmpty()) {
+            return new ArrayList<>(0);
+        }
+        String[] dirs = collectorPath.split(",");
+        return getDateDir(dirs, Config.dateFormat);
+    }
+
+    public List<String> getDateDir(String[] dirs, SimpleDateFormat dateFormat){
+
+    }
+
+
+
     protected Map<String, ArrayList<CollectFile>> getNewFiles(List<String> dirs, FilenameFilter filter){
         dirs = getModifiedDirs(dirs);    //需要copy的文件队列
         log.info("modified dirs:" + dirs);
         Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap = new TreeMap<>();
-        Map<String, ArrayList<CollectFile>> dateTimeToCopiedFilesMap = new TreeMap<>();
+        Map<String, HashSet<String>> dateTimeToCopiedFilesMap = new TreeMap<>();
         Map<String, AtomicLong> dateTimeToFileIdMap = new TreeMap<>();
 
         for (String d : dirs) {
@@ -123,11 +143,76 @@ public abstract  class Collector implements  Runnable {
                         log.warn("文件名不包含日期时间，可能是一个无效的文件或文件名");
                         continue;
                     }
+                    if (options.dateTime != null) {
+                        if (!options.dateTime.equals(dateTime)) {
+                            continue;
+                        }
+                    } else if (options.startTime != null) {
+                        if (!options.startTime.equals(dateTime)) {
+                            continue;
+                        }
+                    }
+                    //文件已经入库过
+                    if (isCopied(dateTime, f , dateTimeToCopiedFilesMap, dateTimeToFileIdMap)) {
+                        continue;
+                    }
+                    //新文件
+                    String date = dateTime.substring(0, dateTime.length() -2);
+                    String srcDir = srcPath + date + "/" + dateTime + "/";
+                    ArrayList<CollectFile> newFiles = dateTimeToNewFilesMap.get(dateTime);
+                    if (newFiles == null) {
+                        newFiles = new ArrayList<>();
+                        dateTimeToNewFilesMap.put(dateTime, newFiles);
+                    }
+                    newFiles.add(new CollectFile(fs, f, srcDir, -1));
                 }
             }
+            return  dateTimeToNewFilesMap;
         }
+        return null;
     }
 
+    private boolean isCopied(String dateTime, File f, Map<String, HashSet<String>> dateTimeToCopiedFilesMap, Map<String, AtomicLong> dateTimeToFileIdMap) {
+        HashSet<String> copiedFiles = dateTimeToCopiedFilesMap.get(dateTime);
+        if (copiedFiles == null) {  //新文件
+            try {
+                copiedFiles = readCopiedFiles(dateTime, dateTimeToFileIdMap);
+                dateTimeToCopiedFilesMap.put(dateTime, copiedFiles);
+            } catch (IOException e) {
+                log.error("Failed to readCopiedFiles, dateTime: " + dateTime, e);
+                return false;
+            }
+        }
+        return copiedFiles.contains(f.getAbsolutePath());
+    }
+
+    private HashSet<String> readCopiedFiles(String dateTime, Map<String, AtomicLong> dateTimeToFileIdMap) throws IOException {
+        String copiedFileName = getCopiedFileName(dateTime);
+        HashSet<String> copiedFiles = new HashSet<>();
+        if (!fs.exists(new Path(copiedFileName))) {  //判断该路径下是否存在该文件，如果不存在
+            dateTimeToFileIdMap.put(dateTime, new AtomicLong(0));
+            return copiedFiles;
+        }
+        //如果存在,就读取文件中的内容
+        try(BufferedReaderIterable bri = FSUtils.createBufferedReadIterable(fs, copiedFileName)){
+            for (String line : bri) {
+                if (line.isEmpty()) {
+                    continue;
+                }
+                String[] a = line.split(",", -1);
+                copiedFiles.add(a[0]);
+                bri.incrementVaildRecords();
+            }
+            dateTimeToFileIdMap.put(dateTime, new AtomicLong(bri.getVaildRecords()));
+        }
+      return copiedFiles;
+    }
+
+    private String getCopiedFileName(String dateTime) {
+        String date = dateTime.substring(0, dateTime.length() - 2);
+        //srcPath + _COPIED_FILES_ + "/" + date + "/" + dateTime + ".txt"文件保存的是文件的路径
+        return srcPath + _COPIED_FILES_ + "/" + date + "/" + dateTime + ".txt";
+    }
 
 
     private boolean isCopyableFile(File f) {
