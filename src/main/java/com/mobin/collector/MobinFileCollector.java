@@ -43,6 +43,13 @@ public   class MobinFileCollector extends Collector {
                 return n.endsWith(DOWN) || n.endsWith(DONE);
             }
         };
-        return null;
+        return getNewFiles(getDataDir(dirs), filter);
+    }
+
+    @Override
+    public String getFileDateTime(String fileName) {
+        //xxxx_20170622205522
+        int pos = fileName.lastIndexOf('_') + 1;
+        return fileName.substring(pos, pos + 10);  //小时
     }
 }

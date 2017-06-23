@@ -1,9 +1,21 @@
 package com.mobin.collector;
 
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,9 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Mobin on 2017/5/6.
  * 实现ThreadFactory定制守护线程，之所以使用守护线程是因为采集程序需要一个长驻的不断轮询的线程
  */
-public class ExecutorUtils {
+public class FSUtils {
 
-    private static final Logger log = LoggerFactory.getLogger(ExecutorUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(FSUtils.class);
 
     public static volatileExecutor createVolatileExecutor(String name) {
         return createVolatileExecutor(name, -1);
@@ -148,4 +160,86 @@ public class ExecutorUtils {
             return thread;
         }
     }
+
+    public static BufferedReaderIterable createBufferedReadIterable(FileSystem fs, String file) throws IOException {
+        return new BufferedReaderIterable(fs, file);
+    }
+
+    public static class BufferedReaderIterable implements Iterable<String>, Closeable {
+
+        private final long startTime = System.currentTimeMillis();
+        private final String file;
+        private final BufferedReader br;
+        private final long size;
+        private long vaildRecords;
+
+        public BufferedReaderIterable(FileSystem fs, String file) throws IOException {
+            this.file = file;
+            Path path = new Path(file);
+            this.size = fs.getFileStatus(path).getLen();
+
+            //解压缩
+            CompressionCodecFactory factory = new CompressionCodecFactory(fs.getConf());
+            CompressionCodec codec = factory.getCodec(path);
+
+            FSDataInputStream inputStream = fs.open(path, 8096);
+
+            if (codec == null) {//文件没有进行压缩
+                br = new BufferedReader(new InputStreamReader(inputStream, Charset.forName("UTF-8")));
+            } else {
+                //创建compressionInputStream来对文件进行解压
+                CompressionInputStream compressionInputStream = codec.createInputStream(inputStream);
+                br = new BufferedReader(new InputStreamReader(compressionInputStream));
+            }
+
+        }
+
+        public void incrementVaildRecords() {
+            vaildRecords ++;
+        }
+
+        public long getVaildRecords() {
+            return vaildRecords;
+        }
+
+        @Override
+        public Iterator<String> iterator() {
+            return new Iterator<String>() {
+                private String line;
+                @Override
+                public boolean hasNext() {
+                    try {
+                        line = br.readLine();
+                    }catch (IOException e) {
+                        log.error("Failed to readLine, file: " + file, e);
+                        line = null;
+                    }
+                    return line != null;
+                }
+
+                @Override
+                public String next() {
+                    return line;
+                }
+
+                @Override
+                public void remove() {
+                       throw new UnsupportedOperationException("remove");
+                }
+            };
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (br != null) {
+                try{
+                    br.close();
+                }catch (Throwable t){
+                    log.debug("Failed to close stream");
+                }
+
+            }
+        }
+    }
+
 }

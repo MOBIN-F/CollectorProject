@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 public class Testm {
     public static void main(String[] args) throws InterruptedException {
 //        while (true) {
-//            ExecutorUtils.volatileExecutor executor = ExecutorUtils.createVolatileExecutor("MOBIN");
+//            FSUtils.volatileExecutor executor = FSUtils.createVolatileExecutor("MOBIN");
 //            MobinFileCollector mobinFileCollector  = new MobinFileCollector();
 //            executor.submitTask(mobinFileCollector);
 //            Thread.sleep(10000);

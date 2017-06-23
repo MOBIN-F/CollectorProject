@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import tachyon.client.OutStream;
 
 import java.io.*;
+import java.util.ArrayList;
 
 
 /**
@@ -35,7 +36,8 @@ public class CollectFile {
         this.targetFile = targetFile;
         this.fileId = fileId;
     }
-    
+
+
     public String getName() {
         return file.getName();
     }
