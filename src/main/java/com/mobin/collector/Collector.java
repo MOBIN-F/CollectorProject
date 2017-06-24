@@ -5,6 +5,7 @@ import com.mobin.collector.FSUtils.*;
 import com.mobin.config.Config;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.tools.cmd.gen.AnyVals;
@@ -12,6 +13,7 @@ import scala.tools.cmd.gen.AnyVals;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -105,8 +107,41 @@ public abstract  class Collector implements  Runnable {
         return getDateDir(dirs, Config.dateFormat);
     }
 
-    public List<String> getDateDir(String[] dirs, SimpleDateFormat dateFormat){
+    public List<String> getDateDirs(List<String> dirs) {
+        return getDateDir(dirs.toArray(new String[0]), Config.dateFormat);
+    }
 
+    public List<String> getDateDir(String[] dirs, SimpleDateFormat dateFormat){
+        for (int i = 0, length = dirs.length; i < length; i ++) {
+            dirs[i] = FSUtils.appendSlash(dirs[i]);
+        }
+        List<String> dateDirs;
+        //只采集某个小时的数据
+        if (options.dateTime != null) {
+             dateDirs = new ArrayList<>(dirs.length);
+            String date = FSUtils.getDate(options.dateTime);  //date:20170624 dateTime:2017032410
+            for (int i = 0, length = dirs.length; i < length; i ++) {
+                     dateDirs.add(dirs[i] + date + "/");   //配置中的采集目录是xx/xxx,到这里拼接日期变成xx/xxx/20170624/
+            }
+        } else {  //集采连续几天的数据
+            String startTime = FSUtils.getDate(options.startTime);
+            String currentDate = FSUtils.getCurrentDate(dateFormat);
+            List<String> dates;
+            try {
+                dates = FSUtils.getDates(startTime, currentDate, dateFormat);
+            } catch (ParseException e) {
+                log.error("Invalid date" , e);
+                return new ArrayList<>(0);
+            }
+            dateDirs = new ArrayList<>(dirs.length * dates.size());
+
+            for (String date : dates) {
+                for (int i = 0, length = dirs.length; i < length; i ++) {
+                    dateDirs.add(dirs[i] + date + "/");
+                }
+            }
+        }
+     return dateDirs;
     }
 
 

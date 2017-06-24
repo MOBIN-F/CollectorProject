@@ -43,7 +43,7 @@ public   class MobinFileCollector extends Collector {
                 return n.endsWith(DOWN) || n.endsWith(DONE);
             }
         };
-        return getNewFiles(getDataDir(dirs), filter);
+        return getNewFiles(getDateDir(), filter);
     }
 
     @Override

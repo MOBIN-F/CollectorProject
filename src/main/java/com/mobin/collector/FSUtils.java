@@ -14,9 +14,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -239,6 +239,53 @@ public class FSUtils {
                 }
 
             }
+        }
+    }
+
+    public static String appendSlash(String str) {
+        if (str == null) {
+            return null;
+        }
+        if (!str.endsWith("/")) {
+            str = str + "/";
+        }
+        return str;
+    }
+
+    public static String getDate(String dateTime) {
+        return dateTime.substring(0, dateTime.length() -2);
+    }
+
+    public static String getCurrentDate(SimpleDateFormat dateFormat) {
+        synchronized (dateFormat) {
+            return dateFormat.format(new Date());
+        }
+    }
+
+    public static List<String> getDates(String startDate, String endDate, SimpleDateFormat simpleDateFormat) throws ParseException {
+        List<String> dates = new ArrayList<>();
+        Date start = parseDate(startDate, simpleDateFormat);
+        Date end = parseDate(endDate, simpleDateFormat);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(start);
+        while (calendar.getTime().compareTo(end) <= 0) {
+            dates.add(formateDate(calendar.getTime(), simpleDateFormat));
+            calendar.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        return dates;
+    }
+
+    public static Date parseDate(String date,SimpleDateFormat dateFormat) throws ParseException {
+        synchronized (dateFormat) {
+            return dateFormat.parse(date);
+        }
+    }
+
+    public static String formateDate (Date date, SimpleDateFormat dateFormat) {
+        synchronized (dateFormat) {
+            return dateFormat.format(date);
         }
     }
 
