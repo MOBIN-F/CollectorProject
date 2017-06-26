@@ -83,7 +83,20 @@ public abstract  class Collector implements  Runnable {
 
     private void copyFile(){
         System.out.println("copyFiles");
-        System.out.println(type);
+        Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap = getNewFiles();
+        copyFileSerially(dateTimeToNewFilesMap);
+    }
+
+    private void copyFileSerially(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap) throws IOException {
+        for (Map.Entry<String,ArrayList<CollectFile>> entry: dateTimeToNewFilesMap.entrySet()) {
+            String dateTime = entry.getKey();
+            ArrayList<CollectFile> collectingFiles = entry.getValue();
+            ArrayList<CollectFile> copiedFile = new ArrayList<>();
+            long size = 0;
+            for (CollectFile collectingFile: collectingFiles) {
+                collectingFile.copy();
+            }
+        }
     }
 
     private synchronized void notifyFinish() {
