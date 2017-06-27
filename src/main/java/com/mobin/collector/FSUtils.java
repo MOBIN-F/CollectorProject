@@ -13,6 +13,9 @@ import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -262,6 +265,7 @@ public class FSUtils {
         }
     }
 
+    //计算
     public static List<String> getDates(String startDate, String endDate, SimpleDateFormat simpleDateFormat) throws ParseException {
         List<String> dates = new ArrayList<>();
         Date start = parseDate(startDate, simpleDateFormat);
@@ -287,6 +291,18 @@ public class FSUtils {
         synchronized (dateFormat) {
             return dateFormat.format(date);
         }
+    }
+
+    public static String getUID() {
+        String ip;
+            try {
+                ip = InetAddress.getLocalHost().getHostAddress();
+            } catch (UnknownHostException e) {
+                ip = "UnknownHost";
+            }
+            ip += "_" + UUID.randomUUID();
+            ip = ip.replace(".","_").replace(":","_").replace("-","_");
+            return ip;
     }
 
 }

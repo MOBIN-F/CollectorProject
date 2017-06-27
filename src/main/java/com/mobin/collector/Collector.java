@@ -10,9 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.tools.cmd.gen.AnyVals;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -60,7 +58,6 @@ public abstract  class Collector implements  Runnable {
                   awaitFinsh();
               }
           };
-        System.out.println(Thread.currentThread().getName());
         //注册钩子，保证程序能正常执行完
         Runtime.getRuntime().addShutdownHook(shutdownHook);
 
@@ -91,11 +88,33 @@ public abstract  class Collector implements  Runnable {
         for (Map.Entry<String,ArrayList<CollectFile>> entry: dateTimeToNewFilesMap.entrySet()) {
             String dateTime = entry.getKey();
             ArrayList<CollectFile> collectingFiles = entry.getValue();
-            ArrayList<CollectFile> copiedFile = new ArrayList<>();
+            ArrayList<CollectFile> copiedFiles = new ArrayList<>();
             long size = 0;
             for (CollectFile collectingFile: collectingFiles) {
                 collectingFile.copy();
+                if(collectingFile.isCopied()) {   //已经copied文件
+                    copiedFiles.add(collectingFile);
+                    size += collectingFile.file.length();
+                }
+                if (size > 0) {
+                    finish(dateTime, copiedFiles);
+                }
             }
+        }
+    }
+
+    private void finish(String dateTime, ArrayList<CollectFile> copiedFiles) {
+        if (copiedFiles.isEmpty()) {
+            return;
+        }
+
+        String id = FSUtils.getUID() + ".txt";
+        OutputStream out = null;
+        String newFile = srcPath + NEW_FILES + "/f_" + dateTime + "_" + id;
+        try {
+            out = new BufferedOutputStream(fs.create(new Path(newFile)));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
