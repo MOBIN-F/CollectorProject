@@ -6,11 +6,14 @@ import com.mobin.config.Config;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.tools.cmd.gen.AnyVals;
 
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -25,6 +28,7 @@ public abstract  class Collector implements  Runnable {
     static final Logger log = LoggerFactory.getLogger(Collector.class);
     static final String DONE = ".done";
     static final String DOWN = ".down";
+    static final Charset CHARSET = Charset.forName("GBK");
 
     FileSystem fs;
     String collectorPath;
@@ -81,7 +85,11 @@ public abstract  class Collector implements  Runnable {
     private void copyFile(){
         System.out.println("copyFiles");
         Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap = getNewFiles();
-        copyFileSerially(dateTimeToNewFilesMap);
+        try {
+            copyFileSerially(dateTimeToNewFilesMap);
+        } catch (IOException e) {
+            log.error("Failed to copy files", e);
+        }
     }
 
     private void copyFileSerially(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap) throws IOException {
@@ -113,8 +121,41 @@ public abstract  class Collector implements  Runnable {
         String newFile = srcPath + NEW_FILES + "/f_" + dateTime + "_" + id;
         try {
             out = new BufferedOutputStream(fs.create(new Path(newFile)));
+            for (CollectFile cf : copiedFiles) {
+                if (cf.isCopied()){
+                    out.write((cf.file + "\n").getBytes(CHARSET));
+                }
+            }
+            out.flush();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Failed to write file: " + newFile, e);
+        }finally {
+            IOUtils.closeStream(out);
+        }
+        updateCopiedDataFiles(dateTime, copiedFiles);
+    }
+
+    private void updateCopiedDataFiles(String dateTime, ArrayList<CollectFile> newFiles) {
+      String copiedFileName = getCopiedFileName(dateTime);  //获取已copied文件路径   srcPath + _COPIED_FILES_ + "/" + date + "/" + dateTime + ".txt"
+      Path path = new Path(copiedFileName);  //获取已copied文件
+        try {
+            OutputStream os = FSUtils.openOutputStream(fs, path);
+            try {
+                StringBuilder buff = new StringBuilder();
+                for (CollectFile cf : newFiles) {
+                    if (cf.isCopied()) {
+                        long modification = cf.getModificationTime();
+                        buff.append(cf.file.getAbsolutePath()).append(",");
+                        buff.append(modification).append(",").append(cf.file.length()).append("\n");
+                    }
+                }
+                os.write(buff.toString().getBytes("UTF-8"));
+                os.flush();
+            }finally {
+                FSUtils.closeStreamSilently(os);
+            }
+        } catch (IOException e) {
+            log.error("Failed to updateCopiedDataFiles: " + copiedFileName);
         }
     }
 
@@ -149,11 +190,12 @@ public abstract  class Collector implements  Runnable {
         }
         List<String> dateDirs;
         //只采集某个小时的数据
+        CollectorOptions options = new CollectorOptions();
         if (options.dateTime != null) {
              dateDirs = new ArrayList<>(dirs.length);
             String date = FSUtils.getDate(options.dateTime);  //date:20170624 dateTime:2017032410
             for (int i = 0, length = dirs.length; i < length; i ++) {
-                     dateDirs.add(dirs[i] + date + "/");   //配置中的采集目录是xx/xxx,到这里拼接日期变成xx/xxx/20170624/
+                     dateDirs.add(dirs[i] + date + File.separator);   //配置中的采集目录是xx/xxx,到这里拼接日期变成xx/xxx/20170624/
             }
         } else {  //集采连续几天的数据
             String startTime = FSUtils.getDate(options.startTime);
@@ -234,9 +276,8 @@ public abstract  class Collector implements  Runnable {
                     newFiles.add(new CollectFile(fs, f, srcDir, -1));
                 }
             }
-            return  dateTimeToNewFilesMap;
         }
-        return null;
+        return  dateTimeToNewFilesMap;
     }
 
     private boolean isCopied(String dateTime, File f, Map<String, HashSet<String>> dateTimeToCopiedFilesMap, Map<String, AtomicLong> dateTimeToFileIdMap) {
