@@ -1,11 +1,13 @@
 package com.mobin.collector;
 
 import com.mobin.config.Config;
+import org.apache.hadoop.fs.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Properties;
+import com.mobin.collector.FSUtils.*;
 
 /**
  * Created by Mobin on 2017/6/25.
@@ -37,9 +39,35 @@ public class DataCollector {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         System.out.println("日志配置加载完成");
     }
 
+    public static void main(String[] args) {
+        CollectorOptions options = new CollectorOptions(args);
+        while (true) {
+            try {
+                run(options);
+                if (options.dateTime != null) {  //只取某一个小时的数据，取完就退出
+                     break;
+                }
+                Thread.sleep(options.checkInterval);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
+        }
+    }
+
+    private static void run(CollectorOptions options) throws Exception {
+        log.info("Starting data collector, " + options);
+        FileSystem fs = null;
+        try {
+            fs = FSUtils.getFileSystem();
+            try(VolatileExecutor executor = FSUtils.createVolatileExecutor("mobinCollector")){
+                executor.submitTasks(options.createCollectors(fs));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

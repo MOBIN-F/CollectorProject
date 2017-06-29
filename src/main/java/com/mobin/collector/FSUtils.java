@@ -1,18 +1,17 @@
 package com.mobin.collector;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.UnknownHostException;
@@ -32,24 +31,24 @@ public class FSUtils {
 
     private static final Logger log = LoggerFactory.getLogger(FSUtils.class);
 
-    public static volatileExecutor createVolatileExecutor(String name) {
+    public static VolatileExecutor createVolatileExecutor(String name) {
         return createVolatileExecutor(name, -1);
     }
 
-    public static volatileExecutor createVolatileExecutor(String name, int maximumPoolSize){
+    public static VolatileExecutor createVolatileExecutor(String name, int maximumPoolSize){
         if (maximumPoolSize <= 0) {
             maximumPoolSize = Runtime.getRuntime().availableProcessors();
         }
-        return new volatileExecutor(1, maximumPoolSize, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+        return new VolatileExecutor(1, maximumPoolSize, 60L, TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
                 new DeamonThreadFactory(name));
     }
 
-    public static class volatileExecutor implements AutoCloseable{
+    public static class VolatileExecutor implements AutoCloseable{
         private final ArrayList<Future<?>> futures = new ArrayList<>();
         private final ArrayList<Object> tasks = new ArrayList<>();
         private  final ThreadPoolExecutor threadPoolExecutor;
 
-        public volatileExecutor(int corePoolSize,   //核心线程，池中所保存的线程数
+        public VolatileExecutor(int corePoolSize,   //核心线程，池中所保存的线程数
                                 int maximumPoolSize,         //最大线程数，可创建的最大线程数
                                 long keepAileTime,              //如果线程数大于corePoolSize,则这些多余的线程空闲时间超过该参数将被终止
                                 TimeUnit unit,                      //keepAileTime的时间单位
@@ -249,8 +248,8 @@ public class FSUtils {
         if (str == null) {
             return null;
         }
-        if (!str.endsWith("/")) {
-            str = str + "/";
+        if (!str.endsWith(File.separator)) {
+            str = str + File.separator;
         }
         return str;
     }
@@ -287,6 +286,12 @@ public class FSUtils {
         }
     }
 
+    public static long parseDateTime(String dateTime, SimpleDateFormat dateTimeFormat) throws ParseException {
+        synchronized (dateTimeFormat){
+            return dateTimeFormat.parse(dateTime).getTime();
+        }
+    }
+
     public static String formateDate (Date date, SimpleDateFormat dateFormat) {
         synchronized (dateFormat) {
             return dateFormat.format(date);
@@ -303,6 +308,53 @@ public class FSUtils {
             ip += "_" + UUID.randomUUID();
             ip = ip.replace(".","_").replace(":","_").replace("-","_");
             return ip;
+    }
+
+    public static OutputStream openOutputStream(FileSystem fs, Path path) throws IOException {
+        OutputStream os = null;
+        if (fs.exists(path)) {
+            try {
+                os = fs.append(path);
+            } catch (Exception e) {
+                //不支持append
+                byte[] oldBytes = FSUtils.readDataFile(fs ,path);
+                os = fs.create(path);  //打开path文件获取流
+                os.write(oldBytes);
+            }
+        } else {
+            os = fs.create(path);
+        }
+          return os;
+        }
+
+    public static byte[] readDataFile(FileSystem fs, Path dateFile) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(2 * 1024 * 1024);
+        InputStream in = null;
+        try {
+            in = fs.open(dateFile);
+            IOUtils.copyBytes(in, bos, 4096, false);
+        } finally {
+            IOUtils.closeStream(in);
+        }
+
+        return bos.toByteArray();
+    }
+
+    public static void closeStreamSilently(Closeable stream) {
+        if (stream != null) {
+            try {
+                stream.close();
+            } catch (Throwable e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to close stream", e);
+                }
+            }
+        }
+    }
+
+    public static FileSystem getFileSystem() throws IOException {
+        Configuration configuration = new Configuration();
+        return FileSystem.get(configuration);
     }
 
 }

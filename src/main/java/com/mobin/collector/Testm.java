@@ -8,14 +8,13 @@ import org.slf4j.LoggerFactory;
  */
 public class Testm {
     public static void main(String[] args) throws InterruptedException {
-//        while (true) {
-//            FSUtils.volatileExecutor executor = FSUtils.createVolatileExecutor("MOBIN");
-//            MobinFileCollector mobinFileCollector  = new MobinFileCollector();
-//            executor.submitTask(mobinFileCollector);
-//            Thread.sleep(10000);
-//        }
+           String dateTime = "2017062811";
+           String str = "-dateTime " + dateTime + " "
+                   + "-collectors mobin ";
 
-         Logger log = LoggerFactory.getLogger(Testm.class);
-        log.info("555");
+           DataCollector.main(str.split(" "));
+
+//         Logger log = LoggerFactory.getLogger(Testm.class);
+//        log.info("555");
     }
 }

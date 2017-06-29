@@ -3,12 +3,8 @@
   <component name="EclipseCodeFormatter">
     <option name="defaultSettings" value="true" />
     <option name="formatter" value="ECLIPSE" />
-    <option name="id" value="1479397266055" />
-    <option name="importOrderConfigFilePath" value="E:\WorkSpace\noce.code.style.xml" />
-    <option name="importOrderFromFile" value="true" />
+    <option name="id" value="1498647708197" />
     <option name="name" value="default" />
-    <option name="pathToConfigFileJava" value="E:\WorkSpace\noce.code.style.xml" />
-    <option name="selectedJavaProfile" value="noce.code.style" />
   </component>
   <component name="EntryPointsManager">
     <entry_points version="2.0" />

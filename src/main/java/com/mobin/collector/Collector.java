@@ -28,11 +28,11 @@ public abstract  class Collector implements  Runnable {
     static final Logger log = LoggerFactory.getLogger(Collector.class);
     static final String DONE = ".done";
     static final String DOWN = ".down";
-    static final Charset CHARSET = Charset.forName("GBK");
+    static final Charset CHARSET =  Charset.forName("GBK");
 
     FileSystem fs;
     String collectorPath;
-    String srcPath;
+    String targetPath;
     String type;
     CollectorOptions options;
 
@@ -118,7 +118,7 @@ public abstract  class Collector implements  Runnable {
 
         String id = FSUtils.getUID() + ".txt";
         OutputStream out = null;
-        String newFile = srcPath + NEW_FILES + "/f_" + dateTime + "_" + id;
+        String newFile = targetPath + NEW_FILES + "/f_" + dateTime + "_" + id;
         try {
             out = new BufferedOutputStream(fs.create(new Path(newFile)));
             for (CollectFile cf : copiedFiles) {
@@ -190,7 +190,6 @@ public abstract  class Collector implements  Runnable {
         }
         List<String> dateDirs;
         //只采集某个小时的数据
-        CollectorOptions options = new CollectorOptions();
         if (options.dateTime != null) {
              dateDirs = new ArrayList<>(dirs.length);
             String date = FSUtils.getDate(options.dateTime);  //date:20170624 dateTime:2017032410
@@ -252,7 +251,7 @@ public abstract  class Collector implements  Runnable {
                         log.warn("文件名不包含日期时间，可能是一个无效的文件或文件名");
                         continue;
                     }
-                    if (options.dateTime != null) {
+                    if (options.dateTime != null) {   //过滤其他小时的文件
                         if (!options.dateTime.equals(dateTime)) {
                             continue;
                         }
@@ -267,7 +266,7 @@ public abstract  class Collector implements  Runnable {
                     }
                     //新文件
                     String date = dateTime.substring(0, dateTime.length() -2);
-                    String srcDir = srcPath + date + "/" + dateTime + "/";
+                    String srcDir = targetPath + date + File.separator + dateTime + File.separator;
                     ArrayList<CollectFile> newFiles = dateTimeToNewFilesMap.get(dateTime);
                     if (newFiles == null) {
                         newFiles = new ArrayList<>();
@@ -319,7 +318,7 @@ public abstract  class Collector implements  Runnable {
     private String getCopiedFileName(String dateTime) {
         String date = dateTime.substring(0, dateTime.length() - 2);
         //srcPath + _COPIED_FILES_ + "/" + date + "/" + dateTime + ".txt"文件保存的是文件的路径
-        return srcPath + _COPIED_FILES_ + "/" + date + "/" + dateTime + ".txt";
+        return targetPath + _COPIED_FILES_ + File.separator+ date + File.separator + dateTime + ".txt";
     }
 
 
