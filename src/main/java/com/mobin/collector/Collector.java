@@ -83,7 +83,6 @@ public abstract  class Collector implements  Runnable {
     }
 
     private void copyFile(){
-        System.out.println("copyFiles");
         Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap = getNewFiles();
         try {
             copyFileSerially(dateTimeToNewFilesMap);
@@ -95,7 +94,7 @@ public abstract  class Collector implements  Runnable {
     private void copyFileSerially(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap) throws IOException {
         for (Map.Entry<String,ArrayList<CollectFile>> entry: dateTimeToNewFilesMap.entrySet()) {
             String dateTime = entry.getKey();
-            ArrayList<CollectFile> collectingFiles = entry.getValue();
+            ArrayList<CollectFile> collectingFiles = entry.getValue();   //需要采集的文件
             ArrayList<CollectFile> copiedFiles = new ArrayList<>();
             long size = 0;
             for (CollectFile collectingFile: collectingFiles) {
@@ -118,7 +117,7 @@ public abstract  class Collector implements  Runnable {
 
         String id = FSUtils.getUID() + ".txt";
         OutputStream out = null;
-        String newFile = targetPath + NEW_FILES + "/f_" + dateTime + "_" + id;
+        String newFile = targetPath + NEW_FILES + File.separator + "f_" + dateTime + "_" + id;
         try {
             out = new BufferedOutputStream(fs.create(new Path(newFile)));
             for (CollectFile cf : copiedFiles) {
@@ -184,6 +183,12 @@ public abstract  class Collector implements  Runnable {
         return getDateDir(dirs.toArray(new String[0]), Config.dateFormat);
     }
 
+    /**
+     *
+     * @param dirs:collectorPath.split(",")
+     * @param dateFormat:时间格式
+     * @return  需要采集的目录，比如[xx/zz/20170628,xx/zzz/20170628]
+     */
     public List<String> getDateDir(String[] dirs, SimpleDateFormat dateFormat){
         for (int i = 0, length = dirs.length; i < length; i ++) {
             dirs[i] = FSUtils.appendSlash(dirs[i]);
@@ -210,7 +215,7 @@ public abstract  class Collector implements  Runnable {
 
             for (String date : dates) {
                 for (int i = 0, length = dirs.length; i < length; i ++) {
-                    dateDirs.add(dirs[i] + date + "/");
+                    dateDirs.add(dirs[i] + date + File.separator);
                 }
             }
         }
@@ -240,8 +245,8 @@ public abstract  class Collector implements  Runnable {
 
             log.info("dir: " + dir + ", files:" + files.length);
             for (File f : files) {
-                if (!isCopyableFile(f)) {  //延迟判断文件是否已经写完，如果目录时间戳在延迟间隔内不改，必需删除目录缓存
-                     removeDirCache(d);
+                if (!isCopyableFile(f)) {  //延迟判断文件是否已经写完，如果目录时间戳在延迟间隔不改了，必需删除目录缓存
+                    removeDirCache(d);
                 } else {
                     String name = f.getName();
                     String dateTime;
@@ -266,13 +271,13 @@ public abstract  class Collector implements  Runnable {
                     }
                     //新文件
                     String date = dateTime.substring(0, dateTime.length() -2);
-                    String srcDir = targetPath + date + File.separator + dateTime + File.separator;
+                    String targetDir = targetPath + date + File.separator + dateTime + File.separator;
                     ArrayList<CollectFile> newFiles = dateTimeToNewFilesMap.get(dateTime);
                     if (newFiles == null) {
                         newFiles = new ArrayList<>();
                         dateTimeToNewFilesMap.put(dateTime, newFiles);
                     }
-                    newFiles.add(new CollectFile(fs, f, srcDir, -1));
+                    newFiles.add(new CollectFile(fs, f, targetDir, -1));
                 }
             }
         }
@@ -324,7 +329,7 @@ public abstract  class Collector implements  Runnable {
 
     private boolean isCopyableFile(File f) {
         long lastModifiedTime = f.lastModified();
-        if (f.isFile() && f.length() >0 && lastModifiedTime + 2 * 60 * 1000 < System.currentTimeMillis()) {  //没有新文件或文件没有被修改
+        if (f.isFile() && f.length() >0 && lastModifiedTime + options.checkInterval < System.currentTimeMillis()) {  //说明在这时间间隔内文件没有被修改
             return true;
         }
         return false;
