@@ -17,6 +17,8 @@ import java.nio.file.Files;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Filter;
 
@@ -85,9 +87,46 @@ public abstract  class Collector implements  Runnable {
     private void copyFile(){
         Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap = getNewFiles();
         try {
+            if (options.parallelizable) {
+                copyFilesParallel(dateTimeToNewFilesMap);
+            }
             copyFileSerially(dateTimeToNewFilesMap);
         } catch (IOException e) {
             log.error("Failed to copy files", e);
+        }
+    }
+
+    private void copyFilesParallel(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap){
+        ThreadPoolExecutor threadPoolExecutor = FSUtils.getThreadPoolExecutor(Runtime.getRuntime().availableProcessors() *2);
+         int count = 0;
+        for (Map.Entry<String, ArrayList<CollectFile>> entry: dateTimeToNewFilesMap.entrySet()) {
+            String dateTime = entry.getKey();
+            ArrayList<CollectFile> collectFiles = entry.getValue();
+
+            ArrayList<Future<?>> futures = new ArrayList<>();
+            final ArrayList<CollectFile> copiedFiles = new ArrayList<>();
+            final AtomicLong size = new AtomicLong();
+            log.info("Collector: " + this + ", dateTime:" + dateTime + ", collectingFiles size: "
+                                  + collectFiles.size() + ", threadPoolExecutor szie:" + threadPoolExecutor.getMaximumPoolSize());
+            for (final CollectFile collectFile: collectFiles){
+                Runnable task = new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            collectFile.copy();
+                            if (collectFile.isCopied()){
+                                synchronized (copiedFiles){  //ArrayList不是同步的
+                                    copiedFiles.add(collectFile);
+                                    size.addAndGet(collectFile.file.length());
+                                }
+                            }
+                        } catch (IOException e) {
+                            log.error("Failed to copy " + collectFile.file, e);
+                        }
+                    }
+                };
+            }
+
         }
     }
 
@@ -354,11 +393,11 @@ public abstract  class Collector implements  Runnable {
             }
 
             synchronized (dirCache) {
-                Long lastModified  = dirCache.get(dir); //获取文件的时间戳（缓存值）
-                long time = d.lastModified();  // （实时值）
-                if (lastModified == null || time > lastModified) {  //说明有新文件或文件有更新
+                Long cacheLastModified  = dirCache.get(dir); //获取文件的时间戳（缓存值）
+                long lastModified = d.lastModified();  // （实时值）
+                if (cacheLastModified == null || lastModified > cacheLastModified) {  //说明有新文件或文件有更新
                     modifiedeDirs.add(dir);
-                    dirCache.put(dir, time);
+                    dirCache.put(dir, lastModified);
                 }
             }
         }

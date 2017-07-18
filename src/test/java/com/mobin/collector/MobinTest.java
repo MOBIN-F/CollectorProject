@@ -28,4 +28,11 @@ public class MobinTest {
         collectFile.copy();
 
     }
+
+    @Test
+    public void test(){
+        Integer a = 1;
+        Integer b = a+ 1;
+        System.out.println(a*b);
+    }
 }

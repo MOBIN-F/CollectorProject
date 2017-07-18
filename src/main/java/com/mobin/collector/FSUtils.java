@@ -1,5 +1,6 @@
 package com.mobin.collector;
 
+import jodd.datetime.TimeUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,6 +31,28 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FSUtils {
 
     private static final Logger log = LoggerFactory.getLogger(FSUtils.class);
+
+    private static ThreadPoolExecutor threadPoolExecutor;
+
+    public static synchronized ThreadPoolExecutor getThreadPoolExecutor(){
+        return getThreadPoolExecutor(-1);
+    }
+
+    public static synchronized ThreadPoolExecutor getThreadPoolExecutor(int maximumPoolSize){
+        if (threadPoolExecutor == null) {
+            threadPoolExecutor = createThreadPoolExecutor(maximumPoolSize);
+        }
+        return threadPoolExecutor;
+    }
+
+    public static ThreadPoolExecutor createThreadPoolExecutor(int maximumPoolSize){
+        if (maximumPoolSize <= 0)
+            maximumPoolSize = Runtime.getRuntime().availableProcessors() * 2;
+        ThreadPoolExecutor tpe = new ThreadPoolExecutor(1, maximumPoolSize, 60L, TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(), new DeamonThreadFactory());
+        tpe.allowsCoreThreadTimeOut();
+        return tpe;
+    }
 
     public static VolatileExecutor createVolatileExecutor(String name) {
         return createVolatileExecutor(name, -1);

@@ -24,6 +24,8 @@ public class CollectorOptions {
     public String dateTime = null;  //只采集某个小时的数据
     public String startTime = null;  //采集>=startTime的数据
 
+    boolean parallelizable = false;
+
     private final HashSet<String> collectors = new HashSet<>();  //要采集哪种类型的数据
 
     public CollectorOptions(){}
