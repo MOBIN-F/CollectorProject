@@ -21,5 +21,7 @@
   2. 将copied的文件添加到copiedFiles队列中
   3. 遍历copiedFiles队列，将文件名定入到target/NEW_FILES/yyyyMMhh_UUID.txt(这个文件是为后面的ETL和Analysis做准备的)
 
+* copyFilesParallel(dateTimeToNewFilesMap):与copyFileSerially的区别是该方法是并行采集文件
+
 
 *  updateCopiedDataFiles(dateTime, copiedFiles)：该方法主要是将采集过的文件信息写入到target/_COPIED_FILES/yyyyMMhh/yyyyMMhh.txt中
