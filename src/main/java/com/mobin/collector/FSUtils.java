@@ -115,7 +115,6 @@ public class FSUtils {
 
         public void submitTask(Callable<?> task) {
             try {
-
                 futures.add(threadPoolExecutor.submit(task));
                 tasks.add(task);
             }catch (Exception e) {

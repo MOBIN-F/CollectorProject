@@ -12,7 +12,7 @@ d="^[0-9]{10}$"
 i=1
 if [ "$#" -eq "1" ] && [ "${#hour}" -eq "10" ] && [[ "$hour" =~ $d ]];then
    echo -n "是否确定删除"
-   echo -en "\\033[31;40m" "${hour:0:4}-${hour:4:2}-${hour:6:2}:${hour:8:2}"
+   echo -en "\\033[31;40m" "${hour:0:4}-${hour:4:2}-${hour:6:2}:${hour:8:2}"0
    echo -en "\\033[0;40m" "下的数据:"
     while [ $i -le 3  ]
 	do 
