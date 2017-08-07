@@ -10,7 +10,8 @@ public class Testm {
     public static void main(String[] args) throws InterruptedException {
            String dateTime = "2017062811";
            String str = "-dateTime " + dateTime + " "
-                   + "-collectors mobin ";
+                   + "-collectors mobin "
+                   + "-parallelizable true ";
 
            DataCollector.main(str.split(" "));
 

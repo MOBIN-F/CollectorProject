@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
@@ -89,15 +90,16 @@ public abstract  class Collector implements  Runnable {
         try {
             if (options.parallelizable) {
                 copyFilesParallel(dateTimeToNewFilesMap);
+            }else {
+                copyFileSerially(dateTimeToNewFilesMap);
             }
-            copyFileSerially(dateTimeToNewFilesMap);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Failed to copy files", e);
         }
     }
 
-    private void copyFilesParallel(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap){
-        ThreadPoolExecutor threadPoolExecutor = FSUtils.getThreadPoolExecutor(Runtime.getRuntime().availableProcessors() *2);
+    private void copyFilesParallel(Map<String, ArrayList<CollectFile>> dateTimeToNewFilesMap) throws ExecutionException, InterruptedException {
+        ThreadPoolExecutor threadPoolExecutor = FSUtils.getThreadPoolExecutor(Runtime.getRuntime().availableProcessors() /2);
          int count = 0;
         for (Map.Entry<String, ArrayList<CollectFile>> entry: dateTimeToNewFilesMap.entrySet()) {
             String dateTime = entry.getKey();
@@ -125,7 +127,12 @@ public abstract  class Collector implements  Runnable {
                         }
                     }
                 };
+               futures.add(threadPoolExecutor.submit(task));
+                for(Future f: futures){
+                    f.get();    //这里必须f.get，因为futures中的任务中子任务
+                }
             }
+            finish(dateTime, copiedFiles);
 
         }
     }

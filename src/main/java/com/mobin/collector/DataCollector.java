@@ -16,6 +16,10 @@ public class DataCollector {
 
     private static final Logger log = LoggerFactory.getLogger(DataCollector.class);
 
+    static {
+        initLog4j();
+    }
+
     //目的：避免与Hadoop和Spark的日志混杂在一起
     public static synchronized void initLog4j(){
         String log4jFile = System.getProperty("log4j");

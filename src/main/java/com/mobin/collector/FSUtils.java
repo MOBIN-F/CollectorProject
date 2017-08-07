@@ -47,6 +47,7 @@ public class FSUtils {
 
     public static ThreadPoolExecutor createThreadPoolExecutor(int maximumPoolSize){
         if (maximumPoolSize <= 0)
+            //采集任务为I/O密集型任务，任务执行过程中等待I/O的时间长于使用CPU的时间，且牌I/O等待状态的时间的线程并不会消耗CPU资源，所以maximumPoolSize=availableProcessors*2
             maximumPoolSize = Runtime.getRuntime().availableProcessors() * 2;
         ThreadPoolExecutor tpe = new ThreadPoolExecutor(1, maximumPoolSize, 60L, TimeUnit.SECONDS,
                 new SynchronousQueue<Runnable>(), new DeamonThreadFactory());

@@ -51,6 +51,7 @@ public class CollectFile {
     }
     
     public void copy() throws IOException {
+        System.out.println(99);
         InputStream in = null;
         OutputStream out = null;
         String fileName = file.getName();

@@ -44,6 +44,9 @@ public class CollectorOptions {
                 case "-collectors":
                     collectorsStr = args[++ i];
                     break;
+                case "-parallelizable":
+                    parallelizable = Boolean.parseBoolean(args[++i]);
+                    break;
                 case "-checkInterval":
                     checkInterval = Integer.parseInt(args[++ i]) * 1000;
                     break;
