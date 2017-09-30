@@ -12,6 +12,7 @@
 
 
  # 核心方法注释：
+* CopyFile：核心代码
  
 * getNewFiles：该方法主要是将所有需要采集的文件信息都保存在dateTimeToNewFilesMa【TreeMap】中
 
