@@ -1,8 +1,10 @@
 package com.mobin.collector;
 
+import com.mobin.common.DataFile;
 import jodd.datetime.TimeUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -378,6 +380,52 @@ public class FSUtils {
     public static FileSystem getFileSystem() throws IOException {
         Configuration configuration = new Configuration();
         return FileSystem.get(configuration);
+    }
+
+    public static void getDataFileRecurslvely(FileSystem fs, String p, ArrayList<DataFile> files) throws IOException {
+        getDataFileRecurslvely(fs, new Path(p), files);
+    }
+
+    //遍历lzo文件
+    public static void getDataFileRecurslvely(FileSystem fs, Path p, ArrayList<DataFile> files) throws IOException {
+        if (fs.isFile(p)){
+            if (isNotEmptyFile(fs, p))
+                files.add(new DataFile(p.toString()));
+            return;
+        }
+
+        boolean containsLzo = false;
+        for (FileStatus fileStatus: fs.listStatus(p)){
+            Path path = fileStatus.getPath();
+            if(fs.isFile(path) && DataFile.isLzoFile(path)){
+                containsLzo = true;
+                break;
+            }
+        }
+
+        //如果当前目录下有lzo文件，那么不再递归遍历子目录，并且只抽取lzo文件
+        if (containsLzo){
+            for (FileStatus fileStatus: fs.listStatus(p)){
+                Path lzoPath = fileStatus.getPath();
+                if (fs.isFile(lzoPath) && DataFile.isLzoFile(lzoPath) && isNotEmptyFile(fs, lzoPath)){
+                    files.add(new DataFile(lzoPath, true));
+                }
+            }
+        }else {
+            for (FileStatus fileStatus: fs.listStatus(p)){
+                Path path = fileStatus.getPath();
+                if (fs.isFile(path) && isNotEmptyFile(fs, path)){
+                    files.add(new DataFile(path, false));
+                }else{
+                    getDataFileRecurslvely(fs,path,files);
+                }
+            }
+        }
+    }
+
+    public static boolean isNotEmptyFile(FileSystem fs,Path file) throws IOException {
+        FileStatus fileStatus = fs.getFileStatus(file);
+        return fileStatus.getLen() > 0;
     }
 
 }

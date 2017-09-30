@@ -31,8 +31,6 @@ public class MobinTest {
 
     @Test
     public void test(){
-        Integer a = 1;
-        Integer b = a+ 1;
-        System.out.println(a*b);
+        System.out.println(System.getProperty("java.io.tmpdir"));
     }
 }
