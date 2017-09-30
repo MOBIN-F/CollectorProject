@@ -377,6 +377,14 @@ public class FSUtils {
         }
     }
 
+    public static boolean exists(FileSystem fs, String p) throws IOException {
+        return fs.exists(new Path(p));
+    }
+
+    public static boolean isFile(FileSystem fs,String p) throws IOException {
+        return fs.isFile(new Path(p));
+    }
+
     public static FileSystem getFileSystem() throws IOException {
         Configuration configuration = new Configuration();
         return FileSystem.get(configuration);
