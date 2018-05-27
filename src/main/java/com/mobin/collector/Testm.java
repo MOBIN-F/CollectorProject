@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
  */
 public class Testm {
     public static void main(String[] args) throws InterruptedException {
-           String dateTime = "2017062811";
+           String dateTime = "2017122711";
            String str = "-dateTime " + dateTime + " "
                    + "-collectors mobin "
                    + "-parallelizable true ";

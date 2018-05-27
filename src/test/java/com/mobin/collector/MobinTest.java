@@ -21,7 +21,7 @@ public class MobinTest {
 
         File file = new File("E:\\collectProjectFile\\TEST.txt.down");
         Configuration conf = new Configuration();
-       FileSystem fs = FileSystem.newInstance(conf);
+        FileSystem fs = FileSystem.newInstance(conf);
         CollectorOptions collectorOptions = new CollectorOptions();
         collectorOptions.dateTime = "20170628";
         CollectFile collectFile = new CollectFile(fs, file, "F:\\test\\mobin");

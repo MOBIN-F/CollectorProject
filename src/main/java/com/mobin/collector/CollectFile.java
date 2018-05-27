@@ -51,7 +51,6 @@ public class CollectFile {
     }
     
     public void copy() throws IOException {
-        System.out.println(99);
         InputStream in = null;
         OutputStream out = null;
         String fileName = file.getName();
@@ -65,7 +64,7 @@ public class CollectFile {
         boolean created = false;
         try {
             in = new FileInputStream(file);
-            out = fs.create(new Path(targetFile));
+            out = fs.create(new Path(targetFile + "/" +fileName));
             created = true;
             //最后个参数为是否同时关闭输入流和输出流
             IOUtils.copyBytes(in, out, 4096, false);

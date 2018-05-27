@@ -206,8 +206,8 @@ public class FSUtils {
             this.size = fs.getFileStatus(path).getLen();
 
             //解压缩
-            CompressionCodecFactory factory = new CompressionCodecFactory(fs.getConf());
-            CompressionCodec codec = factory.getCodec(path);
+//            CompressionCodecFactory factory = new CompressionCodecFactory(fs.getConf());
+            CompressionCodec codec = null;
 
             FSDataInputStream inputStream = fs.open(path, 8096);
 

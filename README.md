@@ -1,4 +1,4 @@
-# CollectorProject
+# CollectorProject[本地文件采集到HDFS]
 采集--每两分钟监测采集目录是否有新文件，有新文件则采集过来，对采集过的文件进行标记防止重复采集
   
   
